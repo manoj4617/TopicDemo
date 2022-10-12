@@ -24,7 +24,7 @@ namespace TopicMessageSender
 
             using ServiceBusMessageBatch messageBatch = await sender.CreateMessageBatchAsync();
 
-            for (int i = 1; i < 4; ++i)
+            for (int i = 1; i < 10; ++i)
             {
                 var person = new Person()
                 {

@@ -23,8 +23,9 @@ namespace SubscriptionReceiver
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {
             string jsonString = Encoding.UTF8.GetString(args.Message.Body);
+            SendMessageToStorageQueue.InsertMessage(jsonString);
             Person person = JsonSerializer.Deserialize<Person>(jsonString);
-            Console.WriteLine($"Person: {person.FirstName} {person.LastName} {person.Age}");
+            Console.WriteLine($"Message sent to queue");
 
             await args.CompleteMessageAsync(args.Message);
         }
@@ -41,6 +42,7 @@ namespace SubscriptionReceiver
             client = new ServiceBusClient(connectionString);
 
             processor = client.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions());
+            
 
             try
             {
