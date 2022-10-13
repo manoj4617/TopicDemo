@@ -8,13 +8,12 @@ namespace SubscriptionReceiver
 {
     public static class SendMessageToStorageQueue
     {
-        static string  connectionString = ConfigurationManager.AppSettings["storageConnectionString"];
+        static string  connectionString = ConfigurationManager.AppSettings["serviceBusConnectionString"];
 
         static string queueName = "topicarchives";
 
         public static void InsertMessage(string message)
         {
-            string connectionString = ConfigurationManager.AppSettings["StorageConnectionString"];
 
             QueueClient queueClient = new QueueClient(connectionString, queueName);
 

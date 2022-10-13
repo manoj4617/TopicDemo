@@ -23,9 +23,9 @@ namespace SubscriptionReceiver
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {
             string jsonString = Encoding.UTF8.GetString(args.Message.Body);
-            SendMessageToStorageQueue.InsertMessage(jsonString);
-            Person person = JsonSerializer.Deserialize<Person>(jsonString);
-            Console.WriteLine($"Message sent to queue");
+            Console.WriteLine(args.Message);
+            BackupToContainerBlob.BackupMessage(args.Message);
+            Console.WriteLine($"Message sent to container blob");
 
             await args.CompleteMessageAsync(args.Message);
         }
