@@ -1,48 +1,68 @@
-﻿using System;
-using System.Configuration;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Azure.Messaging.ServiceBus;
+﻿using Azure.Messaging.ServiceBus;
 using SharedLib.Models;
+using System.Configuration;
+using System.Text.Json;
 
 namespace SubscriptionReceiver
 {
-    class MessageReceiver
+    public class MessageReceiver
     {
-        static string connectionString = ConfigurationManager.AppSettings.Get("serviceBusConnectionString");
-
-        static string topicName = ConfigurationManager.AppSettings.Get("topicName");
-
-        static string subscriptionName = "sub-1";
-
-        static ServiceBusClient client;
-
-        static ServiceBusProcessor processor;
-
-        static async Task MessageHandler(ProcessMessageEventArgs args)
+        public  int SpecflowMessagesCount { get; set; }
+        public  int NonspecflowMessages { get; set; }
+        public MessageReceiver()
         {
-            string jsonString = Encoding.UTF8.GetString(args.Message.Body);
-            Console.WriteLine(args.Message);
-            BackupToContainerBlob.BackupMessage(args.Message);
-            Console.WriteLine($"Message sent to container blob");
-
-            await args.CompleteMessageAsync(args.Message);
+            SpecflowMessagesCount = 0;
+            NonspecflowMessages = 0;
         }
 
-        static Task ErrorHandler(ProcessErrorEventArgs args)
+        string connectionString = ConfigurationManager.AppSettings.Get("serviceBusConnectionString");
+
+        string topicName = ConfigurationManager.AppSettings.Get("topicName");
+
+        string subscriptionName = ConfigurationManager.AppSettings.Get("subscriptionName");
+
+        ServiceBusClient client;
+
+        ServiceBusProcessor processor;
+
+        async Task MessageHandler(ProcessMessageEventArgs args)
         {
-            Console.WriteLine(args.Exception.ToString());
+            Console.WriteLine(args.Message);
+            var messgeBody = JsonSerializer.Deserialize<Device>(args.Message.Body.ToString());
+            if (messgeBody is not null /*&& IsMessageOlder(args.Message)*/)
+            {
+                if (!IsSpecflowMessage(messgeBody))
+                {
+                    BackupToContainerBlob.BackupMessage(args.Message);
+                    NonspecflowMessages++;
+                    Console.WriteLine($"Message sent to container blob");
+                    await args.CompleteMessageAsync(args.Message);
+                }
+                else
+                {
+                    SpecflowMessagesCount++;
+                    Console.WriteLine($"DELETED--specflow_message_id_{args.Message.MessageId} enqueued_on_{args.Message.EnqueuedTime}");
+                    await args.CompleteMessageAsync(args.Message);
+                }
+            }
+            else
+            {
+                await args.DeferMessageAsync(args.Message);
+            }
+        }
+
+         Task ErrorHandler(ProcessErrorEventArgs args)
+        {
+            Console.WriteLine(args.Exception.Message.ToString());
             return Task.CompletedTask;
         }
 
-        static async Task Main()
+        public async Task HandleMessages()
         {
-
             client = new ServiceBusClient(connectionString);
 
             processor = client.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions());
-            
+
 
             try
             {
@@ -57,14 +77,37 @@ namespace SubscriptionReceiver
 
                 Console.WriteLine("\nStopping the receiver...");
                 await processor.StopProcessingAsync();
+                Console.WriteLine($"Total Specflow Messages--{SpecflowMessagesCount}");
+                Console.WriteLine($"Total Non-Specflow Messages--{NonspecflowMessages}");
                 Console.WriteLine("Stopped receiving messages");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
             }
             finally
             {
-
                 await processor.DisposeAsync();
                 await client.DisposeAsync();
             }
+        }
+
+        private bool IsSpecflowMessage(Device deviceMessage)
+        {
+            if (deviceMessage.SerialNumber.StartsWith("Specflow", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        private bool IsMessageOlder(ServiceBusReceivedMessage deviceMessage)
+        {
+            return deviceMessage.EnqueuedTime.Year <= 2021 && deviceMessage.EnqueuedTime.Month < 12 ?
+                true : false;
         }
     }
 }

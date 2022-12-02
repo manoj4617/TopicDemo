@@ -24,13 +24,13 @@ namespace TopicMessageSender
 
             using ServiceBusMessageBatch messageBatch = await sender.CreateMessageBatchAsync();
 
-            for (int i = 1; i < 10; ++i)
+            for (int i = 1; i <= 30; ++i)
             {
-                var person = new Person()
+                var person = new Device()
                 {
-                    FirstName = $"FirstName {i}",
-                    LastName = $"LastName {i}",
-                    Age = i
+                    SerialNumber = $"specflow" + new Random().Next(10000),
+                    DeviceReferenceId = new Guid().ToString(),
+                    Name = $"device-{i}"
                 };
                 string messageBody = JsonSerializer.Serialize(person);
 

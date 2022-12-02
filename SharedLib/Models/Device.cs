@@ -7,15 +7,15 @@ using System.Threading.Tasks;
 
 namespace SharedLib.Models
 {
-    public class Person
+    public class Device
     {
         [Required]
-        public string FirstName { get; set; }
+        public string SerialNumber { get; set; }
 
         [Required]
-        public string LastName { get; set; }
+        public string DeviceReferenceId { get; set; }
 
         [Required]
-        public int Age { get; set; }
+        public string Name { get; set; }
     }
 }
